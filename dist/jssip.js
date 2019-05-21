@@ -12946,7 +12946,10 @@ module.exports = (function(){
  * Dependencies.
  */
 var debug = require('debug')('JsSIP');
-var adapter = require('webrtc-adapter');
+//hack (NGBROWSE patch)
+//reuse existing adapter if exists
+var adapter = typeof window !== 'undefined' && window.adapter || require('webrtc-adapter');
+//end of hack
 var pkg = require('../package.json');
 
 debug('version %s', pkg.version);
@@ -13065,6 +13068,81 @@ Message.prototype.send = function(target, body, options) {
   this.newMessage('local', this.request);
 
   request_sender.send();
+};
+
+//hack (NGBROWSE patch).
+//There is a way to patch only Dialog.prototype.sendUpdate function
+//instead of UA and Message prototypes
+Message.prototype.sendInDialogUpdate = function(rtcSession, body, options) {
+  if (!rtcSession) {
+      throw new TypeError('Invalid rtc session. rtcSession is falsy');
+  }
+  var target = rtcSession.dialog.remote_target.toString();
+
+  var request_sender, event, contentType, eventHandlers, extraHeaders,
+    originalTarget = target;
+
+  if (target === undefined || body === undefined) {
+    throw new TypeError('Not enough arguments');
+  }
+
+  // Check target validity
+  target = this.ua.normalizeTarget(target);
+  if (!target) {
+    throw new TypeError('Invalid target: '+ originalTarget);
+  }
+
+  // Get call options
+  options = options || {};
+  extraHeaders = options.extraHeaders && options.extraHeaders.slice() || [];
+  eventHandlers = options.eventHandlers || {};
+  contentType = options.contentType || 'text/plain';
+
+  this.content_type = contentType;
+
+  // Set event handlers
+  for (event in eventHandlers) {
+    this.on(event, eventHandlers[event]);
+  }
+
+  this.closed = false;
+  this.ua.applicants[this] = this;
+
+  extraHeaders.push('Content-Type: '+ contentType);
+
+  var requestParams = null;
+  if (rtcSession.contact) {
+    extraHeaders.push('Contact: ' + rtcSession.contact);
+  }
+  var dialog = rtcSession.dialog;
+
+  dialog.local_seqnum += 1;
+
+  requestParams = {
+      'cseq': dialog.local_seqnum,
+      'call_id': dialog.id.call_id,
+      //'from_uri': dialog.local_uri,
+      'from_tag': dialog.id.local_tag,
+      //'to_uri': dialog.remote_uri,
+      'to_tag': dialog.id.remote_tag,
+      'route_set': dialog.route_set
+  };
+
+  this.request = new SIPMessage.OutgoingRequest(JsSIP_C.UPDATE, target, this.ua, requestParams, extraHeaders);
+
+  if(body) {
+    this.request.body = body;
+    this.content = body;
+  } else {
+    this.content = null;
+  }
+
+  request_sender = new RequestSender(this, this.ua);
+
+  this.newMessage('local', this.request);
+
+  request_sender.send();
+
 };
 
 Message.prototype.receiveResponse = function(response) {
@@ -13654,8 +13732,9 @@ var RTCSession_ReferSubscriber = require('./RTCSession/ReferSubscriber');
 /**
  * Local variables.
  */
-var holdMediaTypes = ['audio', 'video'];
-
+// Hack (NGBROWSE), commented video, to disable SDP mangling changing to a=sendonly in some scenarios
+var holdMediaTypes = ['audio' /*, 'video' */];
+// End of Hack
 
 function RTCSession(ua) {
   debug('new');
@@ -17706,6 +17785,9 @@ function OutgoingRequest(method, ruri, ua, params, extraHeaders, body) {
     return null;
   }
 
+  //hack to pass fuzeUA
+  this.fuzeUA = ua.fuzeUA;
+
   this.ua = ua;
   this.headers = {};
   this.method = method;
@@ -17731,7 +17813,10 @@ function OutgoingRequest(method, ruri, ua, params, extraHeaders, body) {
 
   // To
   to = (params.to_display_name || params.to_display_name === 0) ? '"' + params.to_display_name + '" ' : '';
-  to += '<' + (params.to_uri || ruri) + '>';
+
+  //hack to accept to header overrides
+  to += '<' + (ua.to || params.to_uri || ruri) + '>';
+
   to += params.to_tag ? ';tag=' + params.to_tag : '';
   this.to = new NameAddrHeader.parse(to);
   this.setHeader('to', to);
@@ -17744,7 +17829,8 @@ function OutgoingRequest(method, ruri, ua, params, extraHeaders, body) {
   } else {
     from = '';
   }
-  from += '<' + (params.from_uri || ua.configuration.uri) + '>;tag=';
+  //hack to accept ua.from property
+  from += '<' + (ua.from || params.from_uri || ua.configuration.uri) + '>;tag=';
   from += params.from_tag || Utils.newTag();
   this.from = new NameAddrHeader.parse(from);
   this.setHeader('from', from);
@@ -17920,7 +18006,7 @@ OutgoingRequest.prototype = {
     // Allow
     msg += 'Allow: '+ JsSIP_C.ALLOWED_METHODS +'\r\n';
     msg += 'Supported: ' +  supported +'\r\n';
-    msg += 'User-Agent: ' + JsSIP_C.USER_AGENT +'\r\n';
+    msg += 'User-Agent: ' + (this.fuzeUA || JsSIP.C.USER_AGENT) +'\r\n';
 
     if (this.body) {
       length = Utils.str_utf8_length(this.body);
@@ -18182,6 +18268,9 @@ IncomingRequest.prototype.reply = function(code, reason, extraHeaders, body, onS
   response += 'Call-ID: ' + this.call_id + '\r\n';
   response += 'CSeq: ' + this.cseq + ' ' + this.method + '\r\n';
 
+  //hack to pass user agent in responses
+  response += 'User-Agent: ' +  (this.fuzeUA || JsSIP.C.USER_AGENT) + '\r\n';
+
   length = extraHeaders.length;
   for (idx = 0; idx < length; idx++) {
     response += extraHeaders[idx].trim() +'\r\n';
@@ -18276,6 +18365,8 @@ IncomingRequest.prototype.reply_sl = function(code, reason) {
   response += 'Call-ID: ' + this.call_id + '\r\n';
   response += 'CSeq: ' + this.cseq + ' ' + this.method + '\r\n';
   response += 'Content-Length: ' + 0 + '\r\n\r\n';
+  //hack to pass User Agent to responses as well
+  response += 'User-Agent: ' +  (this.fuzeUA || JsSIP.C.USER_AGENT) + '\r\n';
 
   this.transport.send(response);
 };
@@ -19283,8 +19374,8 @@ function onDisconnect(error, code, reason) {
       }
     }, this);
   }
-
-  reconnect.call(this, error);
+  //Hack to disable transport recovery
+  //reconnect.call(this, error);
 }
 
 function onData(data) {
@@ -19439,6 +19530,9 @@ function UA(configuration) {
   this.cache = {
     credentials: {}
   };
+
+  //hack to pass fuze fuze_ua config
+  this.fuzeUA = (configuration) ? configuration.fuze_ua : undefined;
 
   this.configuration = {};
   this.dynConfiguration = {};
@@ -19647,6 +19741,19 @@ UA.prototype.sendMessage = function(target, body, options) {
 
   message = new Message(this);
   message.send(target, body, options);
+  return message;
+};
+
+//hack (NGBROWSE patch).
+//There is a way to patch only Dialog.prototype.sendUpdate function
+//instead of UA and Message prototypes
+UA.prototype.sendInDialogUpdate = function(rtcSession, body, options) {
+  debug('sendInDialogUpdate()');
+
+  var message;
+
+  message = new Message(this);
+  message.sendInDialogUpdate(rtcSession, body, options);
   return message;
 };
 
@@ -20563,6 +20670,9 @@ function onTransportData(data) {
   message = data.message;
 
  message = Parser.parseMessage(message, this);
+
+ //hack to pass fuzeUA
+ message.fuzeUA = this.fuzeUA;
 
  if (! message) {
    return;
