@@ -8420,7 +8420,12 @@ module.exports = function () {
               value = value[1];
             }
 
-            data.uri_params[param.toLowerCase()] = value;
+            // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+            // MediaHub and FreeSwitch expects params to have the original case
+            // FreeSwitch works with upper case
+            // MediaHub generally works with lower case
+            data.uri_params[param] = value;
+            // Fuze Hack End
           }(pos0, result0[0], result0[1]);
         }
 
@@ -24573,8 +24578,11 @@ function () {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
-        // Fuze Hack - Key should be in upper case and not lower case
-        this._parameters[key.toUpperCase()] = typeof value === 'undefined' || value === null ? null : value.toString();
+        // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        // MediaHub and FreeSwitch expects params to have the original case
+        // FreeSwitch works with upper case
+        // MediaHub generally works with lower case
+        this._parameters[key] = typeof value === 'undefined' || value === null ? null : value.toString();
         // Fuze Hack End
       }
     }
@@ -24582,8 +24590,8 @@ function () {
     key: "getParam",
     value: function getParam(key) {
       if (key) {
-        // Fuze Hack - Key should be in upper case and not lower case
-        return this._parameters[key.toUpperCase()];
+          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters[key];
         // Fuze Hack End
       }
     }
@@ -24591,16 +24599,16 @@ function () {
     key: "hasParam",
     value: function hasParam(key) {
       if (key) {
-        // Fuze Hack - Key should be in upper case and not lower case
-        return this._parameters.hasOwnProperty(key.toUpperCase()) && true || false;
+          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters.hasOwnProperty(key) && true || false;
         // Fuze Hack End
       }
     }
   }, {
     key: "deleteParam",
     value: function deleteParam(parameter) {
-      // Fuze Hack - Key should be in upper case and not lower case
-      parameter = parameter.toUpperCase();
+      // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+      // parameter = parameter.toLowerCase();
       // Fuze Hack End
 
       if (this._parameters.hasOwnProperty(parameter)) {
