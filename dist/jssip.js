@@ -8425,7 +8425,12 @@ module.exports = function () {
               value = value[1];
             }
 
-            data.uri_params[param.toLowerCase()] = value;
+            // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+            // MediaHub and FreeSwitch expects params to have the original case
+            // FreeSwitch works with upper case
+            // MediaHub generally works with lower case
+            data.uri_params[param] = value;
+            // Fuze Hack End
           }(pos0, result0[0], result0[1]);
         }
 
@@ -16996,7 +17001,9 @@ var C = {
  * Local variables.
  */
 
-var holdMediaTypes = ['audio', 'video'];
+// Fuze Hack - commented video, to disable SDP mangling changing to a=sendonly in some scenarios
+var holdMediaTypes = ['audio' /*, 'video' */];
+// Fuze Hack end
 
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(RTCSession, _EventEmitter);
@@ -21399,7 +21406,10 @@ var OutgoingRequest = /*#__PURE__*/function () {
 
     this.setHeader('max-forwards', JsSIP_C.MAX_FORWARDS); // To
 
-    var to_uri = params.to_uri || ruri;
+    // Fuze Hack - Added "ua.to ||" to be possible to override to_uri
+    var to_uri = ua.to || params.to_uri || ruri;
+    // Fuze Hack end
+
     var to_params = params.to_tag ? {
       tag: params.to_tag
     } : null;
@@ -21407,7 +21417,10 @@ var OutgoingRequest = /*#__PURE__*/function () {
     this.to = new NameAddrHeader(to_uri, to_display_name, to_params);
     this.setHeader('to', this.to.toString()); // From.
 
-    var from_uri = params.from_uri || ua.configuration.uri;
+    // Fuze Hack - Added "ua.from ||" to be possible to override from_uri
+    var from_uri = ua.from || params.from_uri || ua.configuration.uri;
+    // Fuze Hack end
+
     var from_params = {
       tag: params.from_tag || Utils.newTag()
     };
@@ -22137,6 +22150,12 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       response += "Call-ID: ".concat(this.call_id, "\r\n");
       response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
       response += "Content-Length: ".concat(0, "\r\n\r\n");
+
+      // Fuze Hack - Pass User Agent to responses as well
+      var userAgent = this.ua.configuration.user_agent || JsSIP_C.USER_AGENT;
+      response += 'User-Agent: ' +  (this.userAgent) + '\r\n';
+      // Fuze Hack end
+
       this.transport.send(response);
     }
   }]);
@@ -23372,7 +23391,9 @@ module.exports = /*#__PURE__*/function () {
           }, this);
         }
 
-      this._reconnect(error);
+      // Fuze Hack to disable transport recovery
+      // this._reconnect(error);
+      // Fuze Hack end
     }
   }, {
     key: "_onData",
@@ -24385,9 +24406,9 @@ function onTransportData(data) {
   var message = data.message;
   message = Parser.parseMessage(message, this);
 
-  if (!message) {
-    return;
-  }
+ if (! message) {
+   return;
+ }
 
   if (this._status === C.STATUS_USER_CLOSED && message instanceof SIPMessage.IncomingRequest) {
     return;
@@ -24519,27 +24540,38 @@ module.exports = /*#__PURE__*/function () {
     key: "setParam",
     value: function setParam(key, value) {
       if (key) {
-        this._parameters[key.toLowerCase()] = typeof value === 'undefined' || value === null ? null : value.toString();
+        // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        // MediaHub and FreeSwitch expects params to have the original case
+        // FreeSwitch works with upper case
+        // MediaHub generally works with lower case
+        this._parameters[key] = typeof value === 'undefined' || value === null ? null : value.toString();
+        // Fuze Hack End
       }
     }
   }, {
     key: "getParam",
     value: function getParam(key) {
       if (key) {
-        return this._parameters[key.toLowerCase()];
+          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters[key];
+        // Fuze Hack End
       }
     }
   }, {
     key: "hasParam",
     value: function hasParam(key) {
       if (key) {
-        return this._parameters.hasOwnProperty(key.toLowerCase()) && true || false;
+          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters.hasOwnProperty(key) && true || false;
+        // Fuze Hack End
       }
     }
   }, {
     key: "deleteParam",
     value: function deleteParam(parameter) {
-      parameter = parameter.toLowerCase();
+      // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+      // parameter = parameter.toLowerCase();
+      // Fuze Hack End
 
       if (this._parameters.hasOwnProperty(parameter)) {
         var value = this._parameters[parameter];
