@@ -1,5 +1,5 @@
 /*
- * JsSIP v3.5.10
+ * JsSIP v3.5.10-fuze.1
  * the Javascript SIP library
  * Copyright: 2012-2020 José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)
  * Homepage: https://jssip.net
@@ -8423,14 +8423,13 @@ module.exports = function () {
               value = undefined;
             } else {
               value = value[1];
-            }
-
-            // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+            } // Fuze Hack - Key case should be respected (NGBROWSE-3387)
             // MediaHub and FreeSwitch expects params to have the original case
             // FreeSwitch works with upper case
             // MediaHub generally works with lower case
-            data.uri_params[param] = value;
-            // Fuze Hack End
+
+
+            data.uri_params[param] = value; // Fuze Hack End
           }(pos0, result0[0], result0[1]);
         }
 
@@ -17000,10 +16999,11 @@ var C = {
 /**
  * Local variables.
  */
-
 // Fuze Hack - commented video, to disable SDP mangling changing to a=sendonly in some scenarios
-var holdMediaTypes = ['audio' /*, 'video' */];
-// Fuze Hack end
+
+var holdMediaTypes = ['audio'
+/* , 'video' */
+]; // Fuze Hack end
 
 module.exports = /*#__PURE__*/function (_EventEmitter) {
   _inherits(RTCSession, _EventEmitter);
@@ -21405,10 +21405,9 @@ var OutgoingRequest = /*#__PURE__*/function () {
     this.setHeader('via', ''); // Max-Forwards.
 
     this.setHeader('max-forwards', JsSIP_C.MAX_FORWARDS); // To
-
     // Fuze Hack - Added "ua.to ||" to be possible to override to_uri
-    var to_uri = ua.to || params.to_uri || ruri;
-    // Fuze Hack end
+
+    var to_uri = ua.to || params.to_uri || ruri; // Fuze Hack end
 
     var to_params = params.to_tag ? {
       tag: params.to_tag
@@ -21416,10 +21415,9 @@ var OutgoingRequest = /*#__PURE__*/function () {
     var to_display_name = typeof params.to_display_name !== 'undefined' ? params.to_display_name : null;
     this.to = new NameAddrHeader(to_uri, to_display_name, to_params);
     this.setHeader('to', this.to.toString()); // From.
-
     // Fuze Hack - Added "ua.from ||" to be possible to override from_uri
-    var from_uri = ua.from || params.from_uri || ua.configuration.uri;
-    // Fuze Hack end
+
+    var from_uri = ua.from || params.from_uri || ua.configuration.uri; // Fuze Hack end
 
     var from_params = {
       tag: params.from_tag || Utils.newTag()
@@ -22149,12 +22147,10 @@ var IncomingRequest = /*#__PURE__*/function (_IncomingMessage) {
       response += "From: ".concat(this.getHeader('From'), "\r\n");
       response += "Call-ID: ".concat(this.call_id, "\r\n");
       response += "CSeq: ".concat(this.cseq, " ").concat(this.method, "\r\n");
-      response += "Content-Length: ".concat(0, "\r\n\r\n");
+      response += "Content-Length: ".concat(0, "\r\n\r\n"); // Fuze Hack - Pass User Agent to responses as well
 
-      // Fuze Hack - Pass User Agent to responses as well
       var userAgent = this.ua.configuration.user_agent || JsSIP_C.USER_AGENT;
-      response += 'User-Agent: ' +  (this.userAgent) + '\r\n';
-      // Fuze Hack end
+      response += "User-Agent: ".concat(userAgent, "\r\n"); // Fuze Hack end
 
       this.transport.send(response);
     }
@@ -23389,11 +23385,10 @@ module.exports = /*#__PURE__*/function () {
               socket.status = C.SOCKET_STATUS_ERROR;
             }
           }, this);
-        }
-
-      // Fuze Hack to disable transport recovery
+        } // Fuze Hack to disable transport recovery
       // this._reconnect(error);
       // Fuze Hack end
+
     }
   }, {
     key: "_onData",
@@ -24406,9 +24401,9 @@ function onTransportData(data) {
   var message = data.message;
   message = Parser.parseMessage(message, this);
 
- if (! message) {
-   return;
- }
+  if (!message) {
+    return;
+  }
 
   if (this._status === C.STATUS_USER_CLOSED && message instanceof SIPMessage.IncomingRequest) {
     return;
@@ -24544,26 +24539,23 @@ module.exports = /*#__PURE__*/function () {
         // MediaHub and FreeSwitch expects params to have the original case
         // FreeSwitch works with upper case
         // MediaHub generally works with lower case
-        this._parameters[key] = typeof value === 'undefined' || value === null ? null : value.toString();
-        // Fuze Hack End
+        this._parameters[key] = typeof value === 'undefined' || value === null ? null : value.toString(); // Fuze Hack End
       }
     }
   }, {
     key: "getParam",
     value: function getParam(key) {
       if (key) {
-          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
-        return this._parameters[key];
-        // Fuze Hack End
+        // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters[key]; // Fuze Hack End
       }
     }
   }, {
     key: "hasParam",
     value: function hasParam(key) {
       if (key) {
-          // Fuze Hack - Key case should be respected (NGBROWSE-3387)
-        return this._parameters.hasOwnProperty(key) && true || false;
-        // Fuze Hack End
+        // Fuze Hack - Key case should be respected (NGBROWSE-3387)
+        return this._parameters.hasOwnProperty(key) && true || false; // Fuze Hack End
       }
     }
   }, {
@@ -24572,7 +24564,6 @@ module.exports = /*#__PURE__*/function () {
       // Fuze Hack - Key case should be respected (NGBROWSE-3387)
       // parameter = parameter.toLowerCase();
       // Fuze Hack End
-
       if (this._parameters.hasOwnProperty(parameter)) {
         var value = this._parameters[parameter];
         delete this._parameters[parameter];
@@ -26216,14 +26207,13 @@ function functionBindPolyfill(context) {
 }
 
 },{}],30:[function(require,module,exports){
-(function (process){
+(function (process){(function (){
 /* eslint-env browser */
 
 /**
  * This is the web browser implementation of `debug()`.
  */
 
-exports.log = log;
 exports.formatArgs = formatArgs;
 exports.save = save;
 exports.load = load;
@@ -26389,18 +26379,14 @@ function formatArgs(args) {
 }
 
 /**
- * Invokes `console.log()` when available.
- * No-op when `console.log` is not a "function".
+ * Invokes `console.debug()` when available.
+ * No-op when `console.debug` is not a "function".
+ * If `console.debug` is not available, falls back
+ * to `console.log`.
  *
  * @api public
  */
-function log(...args) {
-	// This hackery is required for IE8/9, where
-	// the `console.log` function doesn't have 'apply'
-	return typeof console === 'object' &&
-		console.log &&
-		console.log(...args);
-}
+exports.log = console.debug || console.log || (() => {});
 
 /**
  * Save `namespaces`.
@@ -26482,7 +26468,7 @@ formatters.j = function (v) {
 	}
 };
 
-}).call(this,require('_process'))
+}).call(this)}).call(this,require('_process'))
 },{"./common":31,"_process":33}],31:[function(require,module,exports){
 
 /**
@@ -26603,13 +26589,11 @@ function setup(env) {
 		debug.namespace = namespace;
 		debug.enabled = createDebug.enabled(namespace);
 		debug.useColors = createDebug.useColors();
-		debug.color = selectColor(namespace);
+		debug.color = createDebug.selectColor(namespace);
 		debug.destroy = destroy;
 		debug.extend = extend;
-		// Debug.formatArgs = formatArgs;
-		// debug.rawLog = rawLog;
 
-		// env-specific initialization logic for debug instances
+		// Env-specific initialization logic for debug instances
 		if (typeof createDebug.init === 'function') {
 			createDebug.init(debug);
 		}
@@ -27857,7 +27841,7 @@ module.exports={
   "name": "jssip",
   "title": "JsSIP",
   "description": "the Javascript SIP library",
-  "version": "3.5.10",
+  "version": "3.5.10-fuze.1",
   "homepage": "https://jssip.net",
   "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
   "contributors": [
