@@ -670,7 +670,7 @@ module.exports = /*#__PURE__*/function () {
           // FUZE hack adapt to PeerConnection rollback flow.
           // Don't reply 491 and rollback the client offer.
           // request.reply(491);
-          debug("dialog don't reply with 491s");
+          debug("dialog don't reply with 491 and handle peer connection rollback"); // FUZE hack end
         } else if (this._uas_pending_reply === true) {
           var retryAfter = (Math.random() * 10 | 0) + 1;
           request.reply(500, null, ["Retry-After:".concat(retryAfter)]);
