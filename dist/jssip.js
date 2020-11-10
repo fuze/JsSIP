@@ -667,7 +667,10 @@ module.exports = /*#__PURE__*/function () {
 
       if (request.method === JsSIP_C.INVITE || request.method === JsSIP_C.UPDATE && request.body) {
         if (this._uac_pending_reply === true) {
-          request.reply(491);
+          // FUZE hack adapt to PeerConnection rollback flow.
+          // Don't reply 491 and rollback the client offer.
+          // request.reply(491);
+          debug("dialog don't reply with 491s");
         } else if (this._uas_pending_reply === true) {
           var retryAfter = (Math.random() * 10 | 0) + 1;
           request.reply(500, null, ["Retry-After:".concat(retryAfter)]);
@@ -828,7 +831,16 @@ module.exports = /*#__PURE__*/function () {
     value: function _receiveResponse(response) {
       var _this2 = this;
 
+      // FUZE hack adapt to PeerConnection rollback flow.
+      // Ignore 491 responses
+      if (response.status_code === 491) {
+        this._eventHandlers.onSuccessResponse(response);
+
+        return;
+      } // FUZE hack end
       // RFC3261 12.2.1.2 408 or 481 is received for a request within a dialog.
+
+
       if (response.status_code === 408 || response.status_code === 481) {
         this._eventHandlers.onDialogError(response);
       } else if (response.method === JsSIP_C.INVITE && response.status_code === 491) {
@@ -19665,7 +19677,15 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         } // Handle Session Timers.
 
 
-        this._handleSessionTimersInIncomingResponse(response); // Must have SDP answer.
+        this._handleSessionTimersInIncomingResponse(response); // FUZE hack adapt to PeerConnection rollback flow.
+        // Ignore 491 responses
+
+
+        if (response.status_code === 491) {
+          eventHandlers.succeeded && eventHandlers.succeeded(response);
+          return;
+        } // FUZE hack end
+        // Must have SDP answer.
 
 
         if (sdpOffer) {
