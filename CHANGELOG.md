@@ -1,6 +1,48 @@
 CHANGELOG
 =========
 
+Version 3.5.10 (released in 2020-10-28)
+---------------------------------------
+
+* RTCSession: Fix, in dialog request processing error does not take the seesion into a failed state. Thanks @stefang42 for reportig.
+
+Version 3.5.9 (released in 2020-10-23)
+---------------------------------------
+
+* RTCSession: Fix, fire progress after setRemoteDescription. Credits to @wangduanduan.
+
+Version 3.5.8 (released in 2020-10-14)
+---------------------------------------
+
+* RTCSession: handle incoming BYE in WAITING_FOR_ANSWER state. #665. Credits to @karstenluedtke.
+
+Version 3.5.7 (released in 2020-08-14)
+---------------------------------------
+
+* Registrator: improve expires maths. Credits to Roman Shpount.
+
+Version 3.5.6 (released in 2020-08-13)
+---------------------------------------
+
+* Registrator: improve expires maths. Credits to Roman Shpount.
+
+Version 3.5.5 (released in 2020-07-29)
+---------------------------------------
+
+* JsSIP.d.ts: import and export in two steps. #651. Credits to @ashlanderDesign.
+
+Version 3.5.4 (released in 2020-07-24)
+---------------------------------------
+
+* Fix request cseq upon 491 response (#653). Credits to @mattdimeo.
+* UA: Allow to change authorization_user (#652). Credits to @jose-lopes.
+
+Version 3.5.3 (released in 2020-07-09)
+---------------------------------------
+
+* RTCSession: force gather candidates when iceRestart is true (#641). Credits to @jose-lopes.
+* Fix crash if the request does not have Content-Type header (#650). Credits to @hxl-dy
+
 Version 3.5.2 (released in 2020-07-07)
 ---------------------------------------
 

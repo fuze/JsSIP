@@ -1,5 +1,5 @@
 /*
- * JsSIP v3.5.1
+ * JsSIP v3.5.10
  * the Javascript SIP library
  * Copyright: 2012-2020 José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)
  * Homepage: https://jssip.net
@@ -839,7 +839,7 @@ module.exports = /*#__PURE__*/function () {
             this._eventHandlers.onErrorResponse(response);
           }
         } else {
-          this._request.cseq.value = this._dialog.local_seqnum += 1;
+          this._request.cseq = this._dialog.local_seqnum += 1;
           this._reattemptTimer = setTimeout(function () {
             // TODO: look at dialog state instead.
             if (_this2._dialog.owner.status !== RTCSession.C.STATUS_TERMINATED) {
@@ -17268,7 +17268,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
       debug('init_incoming()');
       var expires;
-      var contentType = request.getHeader('Content-Type'); // Check body and content type.
+      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined; // Check body and content type.
 
       if (request.body && contentType !== 'application/sdp') {
         request.reply(415);
@@ -18268,7 +18268,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
               request.reply(200);
 
               this._ended('remote', request, JsSIP_C.causes.BYE);
-            } else if (this._status === C.STATUS_INVITE_RECEIVED) {
+            } else if (this._status === C.STATUS_INVITE_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER) {
               request.reply(200);
 
               this._request.reply(487, 'BYE Received');
@@ -18295,7 +18295,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           case JsSIP_C.INFO:
             if (this._status === C.STATUS_1XX_RECEIVED || this._status === C.STATUS_WAITING_FOR_ANSWER || this._status === C.STATUS_ANSWERED || this._status === C.STATUS_WAITING_FOR_ACK || this._status === C.STATUS_CONFIRMED) {
-              var contentType = request.getHeader('content-type');
+              var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
 
               if (contentType && contentType.match(/^application\/dtmf-relay/i)) {
                 new RTCSession_DTMF(this).init_incoming(request);
@@ -18606,7 +18606,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         });
       }).then(function () {
         // Resolve right away if 'pc.iceGatheringState' is 'complete'.
-        if (connection.iceGatheringState === 'complete') {
+        if (connection.iceGatheringState === 'complete' && (!constraints || !constraints.iceRestart)) {
           _this13._rtcReady = true;
           var e = {
             originator: 'local',
@@ -18729,7 +18729,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var _this14 = this;
 
       debug('receiveReinvite()');
-      var contentType = request.getHeader('Content-Type');
+      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
         request: request,
         callback: undefined,
@@ -18835,7 +18835,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       var _this16 = this;
 
       debug('receiveUpdate()');
-      var contentType = request.getHeader('Content-Type');
+      var contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       var data = {
         request: request,
         callback: undefined,
@@ -18961,7 +18961,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
           _this17.emit('peerconnection:setremotedescriptionfailed', error);
 
-          throw new Error('peerconnection.setRemoteDescription() failed');
+          throw error;
         });
       }).then(function () {
         if (_this17._status === C.STATUS_TERMINATED) {
@@ -18983,10 +18983,13 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           throw new Error('terminated');
         }
 
-        return _this17._createLocalDescription('answer', _this17._rtcAnswerConstraints)["catch"](function () {
+        return _this17._createLocalDescription('answer', _this17._rtcAnswerConstraints)["catch"](function (error) {
           request.reply(500);
-          throw new Error('_createLocalDescription() failed');
+          debugerror('emit "peerconnection:createtelocaldescriptionfailed" [error:%o]', error);
+          throw error;
         });
+      })["catch"](function (error) {
+        debugerror('_processInDialogSdpOffer() failed [error: %o]', error);
       });
       return this._connectionPromiseQueue;
     }
@@ -19337,8 +19340,6 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
 
             this._status = C.STATUS_1XX_RECEIVED;
 
-            this._progress('remote', response);
-
             if (!response.body) {
               break;
             }
@@ -19356,6 +19357,8 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
             });
             this._connectionPromiseQueue = this._connectionPromiseQueue.then(function () {
               return _this22._connection.setRemoteDescription(answer);
+            }).then(function () {
+              return _this22._progress('remote', response);
             })["catch"](function (error) {
               debugerror('emit "peerconnection:setremotedescriptionfailed" [error:%o]', error);
 
@@ -19521,7 +19524,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         if (!response.body) {
           onFailed.call(this);
           return;
-        } else if (response.getHeader('Content-Type') !== 'application/sdp') {
+        } else if (!response.hasHeader('Content-Type') || response.getHeader('Content-Type').toLowerCase() !== 'application/sdp') {
           onFailed.call(this);
           return;
         }
@@ -19669,7 +19672,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
           if (!response.body) {
             onFailed.call(this);
             return;
-          } else if (response.getHeader('Content-Type') !== 'application/sdp') {
+          } else if (!response.hasHeader('Content-Type') || response.getHeader('Content-Type').toLowerCase() !== 'application/sdp') {
             onFailed.call(this);
             return;
           }
@@ -20514,7 +20517,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
       this._direction = 'incoming';
       this.request = request;
       request.reply(200);
-      this._contentType = request.getHeader('content-type');
+      this._contentType = request.hasHeader('Content-Type') ? request.getHeader('Content-Type').toLowerCase() : undefined;
       this._body = request.body;
 
       this._session.newInfo({
@@ -20951,7 +20954,8 @@ module.exports = /*#__PURE__*/function () {
                 }
 
                 expires = Number(expires);
-                if (expires < MIN_REGISTER_EXPIRES) expires = MIN_REGISTER_EXPIRES; // Re-Register or emit an event before the expiration interval has elapsed.
+                if (expires < MIN_REGISTER_EXPIRES) expires = MIN_REGISTER_EXPIRES;
+                var timeout = expires > 64 ? expires * 1000 / 2 + Math.floor((expires / 2 - 32) * 1000 * Math.random()) : expires * 1000 - 5000; // Re-Register or emit an event before the expiration interval has elapsed.
                 // For that, decrease the expires value. ie: 3 seconds.
 
                 _this._registrationTimer = setTimeout(function () {
@@ -20963,7 +20967,7 @@ module.exports = /*#__PURE__*/function () {
                   } else {
                     _this._ua.emit('registrationExpiring');
                   }
-                }, expires * 1000 - 5000); // Save gruu values.
+                }, timeout); // Save gruu values.
 
                 if (contact.hasParam('temp-gruu')) {
                   _this._ua.contact.temp_gruu = contact.getParam('temp-gruu').replace(/"/g, '');
@@ -23789,6 +23793,9 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "get",
     value: function get(parameter) {
       switch (parameter) {
+        case 'authorization_user':
+          return this._configuration.authorization_user;
+
         case 'realm':
           return this._configuration.realm;
 
@@ -23809,6 +23816,12 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
     key: "set",
     value: function set(parameter, value) {
       switch (parameter) {
+        case 'authorization_user':
+          {
+            this._configuration.authorization_user = String(value);
+            break;
+          }
+
         case 'password':
           {
             this._configuration.password = String(value);
@@ -24266,7 +24279,7 @@ module.exports = /*#__PURE__*/function (_EventEmitter) {
         }
       }; // Seal the configuration.
 
-      var writable_parameters = ['password', 'realm', 'ha1', 'display_name', 'register'];
+      var writable_parameters = ['authorization_user', 'password', 'realm', 'ha1', 'display_name', 'register'];
 
       for (var parameter in this._configuration) {
         if (Object.prototype.hasOwnProperty.call(this._configuration, parameter)) {
@@ -27844,7 +27857,7 @@ module.exports={
   "name": "jssip",
   "title": "JsSIP",
   "description": "the Javascript SIP library",
-  "version": "3.5.1",
+  "version": "3.5.10",
   "homepage": "https://jssip.net",
   "author": "José Luis Millán <jmillan@aliax.net> (https://github.com/jmillan)",
   "contributors": [
