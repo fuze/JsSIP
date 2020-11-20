@@ -75,21 +75,21 @@ module.exports = {
     test.strictEqual(uri.hasParam('foo'), false);
 
     uri.setParam('Foo', null);
-    test.strictEqual(uri.hasParam('FOO'), true);
+    test.strictEqual(uri.hasParam('Foo'), true);
 
     uri.setParam('Baz', 123);
-    test.strictEqual(uri.getParam('baz'), '123');
-    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;foo;baz=123');
+    test.strictEqual(uri.getParam('Baz'), '123');
+    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;Foo;Baz=123');
 
     uri.setParam('zero', 0);
-    test.strictEqual(uri.hasParam('ZERO'), true);
-    test.strictEqual(uri.getParam('ZERO'), '0');
-    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;foo;baz=123;zero=0');
-    test.strictEqual(uri.deleteParam('ZERO'), '0');
+    test.strictEqual(uri.hasParam('zero'), true);
+    test.strictEqual(uri.getParam('zero'), '0');
+    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;Foo;Baz=123;zero=0');
+    test.strictEqual(uri.deleteParam('zero'), '0');
 
-    test.strictEqual(uri.deleteParam('baZ'), '123');
+    test.strictEqual(uri.deleteParam('Baz'), '123');
     test.strictEqual(uri.deleteParam('NOO'), undefined);
-    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;foo');
+    test.strictEqual(uri.toString(), 'sip:alice@jssip.net;Foo');
 
     uri.clearParams();
     test.strictEqual(uri.toString(), 'sip:alice@jssip.net');
